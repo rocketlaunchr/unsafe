@@ -21,7 +21,7 @@ you are doing.
 3. Read [Exploring ‘unsafe’ Features in Go 1.20: A Hands-On Demo](https://medium.com/@bradford_hamilton/exploring-unsafe-features-in-go-1-20-a-hands-on-demo-7149ba82e6e1) and [Modifying Private Variables of a Struct in Go Using unsafe and reflect](https://medium.com/@darshan.na185/modifying-private-variables-of-a-struct-in-go-using-unsafe-and-reflect-5447b3019a80).
   
 
-## Example
+## Example 1 - Setting a field
 
 ```go
 type Example struct {
@@ -42,6 +42,12 @@ ptr := unsafe.SetField[string](&e, unsafe.F("e"))
 
 // Option 2
 unsafe.SetField(&e, unsafe.F("e"), "New Value 2")
+```
+
+## Example 2 - Reading a field
+
+```go
+val := unsafe.Value[string](&e, unsafe.F("e"))
 ```
 
 Other useful packages

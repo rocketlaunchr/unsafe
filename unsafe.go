@@ -75,6 +75,15 @@ type field struct {
 	t  *reflect.Type
 }
 
+// Value returns the value of the unexported field of a struct.
+//
+// NOTE: This function panics if strct is not actually a struct or the
+// field could not be found.
+func Value[V any](strct any, f field) V {
+	ptr := SetField[V](strct, f)
+	return *(*V)(ptr)
+}
+
 // SetField allows unexported fields of a struct to be modified.
 // It returns a Pointer to the field if you wish to change the value
 // externally instead of by passing a new value.
