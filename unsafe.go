@@ -116,7 +116,7 @@ func SetField[V any](strct any, f field, newValue ...V) Pointer {
 		}
 		return ptr
 	} else if f.is != nil {
-		if f.t != nil && v.Field(*f.i).Type() != *f.t {
+		if f.t != nil && v.FieldByIndex(*f.is).Type() != *f.t {
 			panic("struct field type does not match")
 		}
 		ptr := v.FieldByIndex(*f.is).Addr().UnsafePointer()
