@@ -18,14 +18,15 @@ you are doing.
 
 1. You need to ensure the `newValue` is the **same type** as the field's type.
 2. You need to make sure the field is not being modifed by multiple go-routines concurrently.
-3. Read [Exploring ‘unsafe’ Features in Go 1.20: A Hands-On Demo](https://medium.com/@bradford_hamilton/exploring-unsafe-features-in-go-1-20-a-hands-on-demo-7149ba82e6e1) and [Modifying Private Variables of a Struct in Go Using unsafe and reflect](https://medium.com/@darshan.na185/modifying-private-variables-of-a-struct-in-go-using-unsafe-and-reflect-5447b3019a80).
+3. **Read [Safety and Numbers — Understanding unsafe in Go](https://medium.com/@rocketlaunchr.cloud/safety-and-numbers-ffef91c384a3)**
+4. Read [Exploring ‘unsafe’ Features in Go 1.20: A Hands-On Demo](https://medium.com/@bradford_hamilton/exploring-unsafe-features-in-go-1-20-a-hands-on-demo-7149ba82e6e1) and [Modifying Private Variables of a Struct in Go Using unsafe and reflect](https://medium.com/@darshan.na185/modifying-private-variables-of-a-struct-in-go-using-unsafe-and-reflect-5447b3019a80).
   
 
 ## Example 1 - Setting a field
 
 ```go
 type Example struct {
-	e string // unexported string 
+	private string // unexported string 
 }
 ```
 
@@ -37,17 +38,17 @@ import "github.com/rocketlaunchr/unsafe"
 e := Example{}
 
 // Option 1
-ptr := unsafe.SetField[string](&e, unsafe.F("e"))
+ptr := unsafe.SetField[string](&e, unsafe.F("private"))
 *(*string)(ptr) = "New Value" // Note: If the field type is string, then ptr must be cast to *string
 
 // Option 2
-unsafe.SetField(&e, unsafe.F("e"), "New Value 2")
+unsafe.SetField(&e, unsafe.F("private"), "New Value 2")
 ```
 
 ## Example 2 - Reading a field
 
 ```go
-val := unsafe.Value[string](&e, unsafe.F("e"))
+val := unsafe.Value[string](&e, unsafe.F("private"))
 ```
 
 Other useful packages

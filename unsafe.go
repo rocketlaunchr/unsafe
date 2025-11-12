@@ -5,53 +5,104 @@ import (
 	"unsafe"
 )
 
-type Pointer = unsafe.Pointer
-type IntegerType interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
-}
+type (
+	// Type
+	//
+	// See: https://pkg.go.dev/reflect#Type
+	Type = reflect.Type
 
-type ArbitraryType interface {
-	any
-}
+	// Pointer
+	//
+	// See: https://pkg.go.dev/unsafe#Pointer
+	Pointer = unsafe.Pointer
 
-func Alignof[_ArbitraryType ArbitraryType](x _ArbitraryType) uintptr {
+	_IntegerType interface {
+		~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+	}
+
+	_ArbitraryType interface {
+		any
+	}
+)
+
+// Alignof
+//
+// See: https://pkg.go.dev/unsafe#Alignof
+func Alignof[ArbitraryType _ArbitraryType](x ArbitraryType) uintptr {
 	return unsafe.Alignof(x)
 }
 
-func Sizeof[_ArbitraryType ArbitraryType](x _ArbitraryType) uintptr {
+// Sizeof
+//
+// See: https://pkg.go.dev/unsafe#Sizeof
+func Sizeof[ArbitraryType _ArbitraryType](x ArbitraryType) uintptr {
 	return unsafe.Sizeof(x)
 }
 
-func String[_IntegerType IntegerType](ptr *byte, len _IntegerType) string {
+// String
+//
+// See: https://pkg.go.dev/unsafe#String
+func String[IntegerType _IntegerType](ptr *byte, len IntegerType) string {
 	return unsafe.String(ptr, len)
 }
 
+// StringData
+//
+// See: https://pkg.go.dev/unsafe#StringData
 func StringData(str string) *byte {
 	return unsafe.StringData(str)
 }
 
-func Slice[_ArbitraryType ArbitraryType, _IntegerType IntegerType](ptr *_ArbitraryType, len _IntegerType) []_ArbitraryType {
+// Slice
+//
+// See: https://pkg.go.dev/unsafe#Slice
+func Slice[ArbitraryType _ArbitraryType, IntegerType _IntegerType](ptr *ArbitraryType, len IntegerType) []ArbitraryType {
 	return unsafe.Slice(ptr, len)
 }
 
-func SliceData[_ArbitraryType ArbitraryType](slice []_ArbitraryType) *_ArbitraryType {
+// SliceData
+//
+// See: https://pkg.go.dev/unsafe#SliceData
+func SliceData[ArbitraryType _ArbitraryType](slice []ArbitraryType) *ArbitraryType {
 	return unsafe.SliceData(slice)
 }
 
-func Add[_IntegerType IntegerType](ptr Pointer, len _IntegerType) Pointer {
+// Add
+//
+// See: https://pkg.go.dev/unsafe#Add
+func Add[IntegerType _IntegerType](ptr Pointer, len IntegerType) Pointer {
 	return unsafe.Add(ptr, len)
 }
 
-// F calls the Field function directly.
-func F[F interface{ int | []int | string }](f F, typ ...reflect.Type) field {
+// TypeOf returns the reflection [Type] that represents the dynamic type of i.
+// If i is a nil interface value, TypeOf returns nil.
+func TypeOf(i any) Type {
+	return reflect.TypeOf(i)
+}
+
+// TypeFor returns the [Type] that represents the type argument T.
+func TypeFor[T any]() Type {
+	return reflect.TypeFor[T]()
+}
+
+type field struct {
+	i  *int
+	is *[]int
+	n  *string
+	u  *uintptr
+	t  *Type
+}
+
+// F is shorthand for the Field function.
+func F[F interface{ int | []int | string | uintptr }](f F, typ ...Type) field {
 	return Field(f, typ...)
 }
 
-// Field selects which field in a struct you wish to modify.
+// Field selects a field in a struct.
 // The field name can be selected by passing an integer or a string.
 // An optional type constraint can be provided as a safety precaution to ensure that the field's type
 // is what you expected.
-func Field[F interface{ int | []int | string }](f F, typ ...reflect.Type) field {
+func Field[F interface{ int | []int | string | uintptr }](f F, typ ...Type) field {
 	var t *reflect.Type
 	if len(typ) > 0 {
 		t = &(typ[0])
@@ -64,15 +115,10 @@ func Field[F interface{ int | []int | string }](f F, typ ...reflect.Type) field 
 		return field{is: &f, t: t}
 	case string:
 		return field{n: &f, t: t}
+	case uintptr:
+		return field{u: &f, t: t}
 	}
 	panic("won't reach")
-}
-
-type field struct {
-	i  *int
-	is *[]int
-	n  *string
-	t  *reflect.Type
 }
 
 // Value returns the value of the unexported field of a struct.
@@ -106,38 +152,33 @@ func SetField[V any](strct any, f field, newValue ...V) Pointer {
 		panic("strct is not a struct")
 	}
 
+	var ptr unsafe.Pointer
+
 	if f.i != nil {
 		if f.t != nil && v.Field(*f.i).Type() != *f.t {
 			panic("struct field type does not match")
 		}
-		ptr := v.Field(*f.i).Addr().UnsafePointer()
-		if len(newValue) > 0 {
-			*(*V)(ptr) = newValue[0]
-		}
-		return ptr
+		ptr = v.Field(*f.i).Addr().UnsafePointer()
 	} else if f.is != nil {
 		if f.t != nil && v.FieldByIndex(*f.is).Type() != *f.t {
 			panic("struct field type does not match")
 		}
-		ptr := v.FieldByIndex(*f.is).Addr().UnsafePointer()
-		if len(newValue) > 0 {
-			*(*V)(ptr) = newValue[0]
-		}
-		return ptr
+		ptr = v.FieldByIndex(*f.is).Addr().UnsafePointer()
 	} else if f.n != nil {
-		for i := 0; i < v.NumField(); i++ {
-			if t.Field(i).Name == *f.n {
-				if f.t != nil && v.Field(i).Type() != *f.t {
-					panic("struct field type does not match")
-				}
-				ptr := v.Field(i).Addr().UnsafePointer()
-				if len(newValue) > 0 {
-					*(*V)(ptr) = newValue[0]
-				}
-				return ptr
+		fbn := v.FieldByName(*f.n)
+		if fbn.IsValid() {
+			if f.t != nil && fbn.Type() != *f.t {
+				panic("struct field type does not match")
 			}
+			ptr = fbn.Addr().UnsafePointer()
+		} else {
+			panic("struct field name not found")
 		}
-		panic("struct field name not found")
+	} else if f.u != nil {
+		ptr = unsafe.Add(v.Addr().UnsafePointer(), *f.u)
 	}
-	panic("won't reach")
+	if len(newValue) > 0 {
+		*(*V)(ptr) = newValue[0]
+	}
+	return ptr
 }
