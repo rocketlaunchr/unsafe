@@ -137,6 +137,18 @@ func Value[V any](strct any, f field) V {
 // NOTE: This function panics if strct is not actually a struct or the
 // field could not be found.
 func SetField[V any](strct any, f field, newValue ...V) Pointer {
+	// Special case - strct is an unsafe.Pointer
+	if ptr, ok := strct.(unsafe.Pointer); ok {
+		if f.u != nil {
+			ptr = unsafe.Add(ptr, *f.u)
+		}
+
+		if len(newValue) > 0 {
+			*(*V)(ptr) = newValue[0]
+		}
+		return ptr
+	}
+
 	v := reflect.ValueOf(strct)
 	if !v.IsValid() {
 		panic("strct not valid")
