@@ -99,7 +99,7 @@ func F[F interface{ int | []int | string | uintptr }](f F, typ ...Type) field {
 }
 
 // Field selects a field in a struct.
-// The field name can be selected by passing an integer or a string.
+// The field can be selected by passing an integer or a (name) string.
 // An optional type constraint can be provided as a safety precaution to ensure that the field's type
 // is what you expected.
 func Field[F interface{ int | []int | string | uintptr }](f F, typ ...Type) field {
@@ -125,9 +125,9 @@ func Field[F interface{ int | []int | string | uintptr }](f F, typ ...Type) fiel
 //
 // NOTE: This function panics if strct is not actually a struct or the
 // field could not be found.
-func Value[V any](strct any, f field) V {
-	ptr := SetField[V](strct, f)
-	return *(*V)(ptr)
+func Value[T any](strct any, f field) T {
+	ptr := SetField[T](strct, f)
+	return *(*T)(ptr)
 }
 
 // SetField allows unexported fields of a struct to be modified.
@@ -136,7 +136,7 @@ func Value[V any](strct any, f field) V {
 //
 // NOTE: This function panics if strct is not actually a struct or the
 // field could not be found.
-func SetField[V any](strct any, f field, newValue ...V) Pointer {
+func SetField[T any](strct any, f field, newValue ...T) Pointer {
 	// Special case - strct is an unsafe.Pointer
 	if ptr, ok := strct.(unsafe.Pointer); ok {
 		if f.u != nil {
@@ -144,7 +144,7 @@ func SetField[V any](strct any, f field, newValue ...V) Pointer {
 		}
 
 		if len(newValue) > 0 {
-			*(*V)(ptr) = newValue[0]
+			*(*T)(ptr) = newValue[0]
 		}
 		return ptr
 	}
@@ -190,7 +190,7 @@ func SetField[V any](strct any, f field, newValue ...V) Pointer {
 		ptr = unsafe.Add(v.Addr().UnsafePointer(), *f.u)
 	}
 	if len(newValue) > 0 {
-		*(*V)(ptr) = newValue[0]
+		*(*T)(ptr) = newValue[0]
 	}
 	return ptr
 }
