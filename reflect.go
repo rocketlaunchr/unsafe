@@ -4,19 +4,20 @@ import (
 	"reflect"
 )
 
-type pointers struct {
+// PtrOs represents the offsets of a struct's Pointer fields.
+type PtrOs struct {
 	offset uintptr
 	size   uintptr
 }
 
 // FindPointerFields finds the offsets of all fields in a struct
 // that contain pointers and other reference types.
-func FindPointerFields(t reflect.Type) []pointers {
+func FindPointerFields(t reflect.Type) []PtrOs {
 	return findPointerFields(t, 0, true)
 }
 
-func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []pointers {
-	var results []pointers
+func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []PtrOs {
+	var results []PtrOs
 
 	if top {
 		// If the type is a pointer, dereference it.
@@ -52,17 +53,17 @@ func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []pointe
 				case reflect.Array:
 				// Not possible
 				case reflect.Slice, reflect.String, reflect.Interface, reflect.Chan, reflect.Map, reflect.Func, reflect.Pointer, reflect.UnsafePointer:
-					results = append(results, pointers{
+					results = append(results, PtrOs{
 						offset: (fieldOffset),
 						size:   (field.Type.Size()),
 					})
 				case reflect.Struct:
 					if maxElements > 0 {
 						pfs := findPointerFields(f, fieldOffset, false)
-						res := make([]pointers, 0, len(pfs)*maxElements)
+						res := make([]PtrOs, 0, len(pfs)*maxElements)
 						for _, val := range pfs {
 							for i := 0; i < maxElements; i++ {
-								res = append(res, pointers{
+								res = append(res, PtrOs{
 									offset: val.offset + f.Size()*uintptr(i),
 									size:   val.size,
 								})
@@ -74,7 +75,7 @@ func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []pointe
 
 				}
 			case reflect.Slice, reflect.String, reflect.Interface, reflect.Chan, reflect.Map, reflect.Func, reflect.Pointer, reflect.UnsafePointer:
-				results = append(results, pointers{
+				results = append(results, PtrOs{
 					offset: (fieldOffset),
 					size:   (field.Type.Size()),
 				})

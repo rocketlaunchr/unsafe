@@ -6,4 +6,5 @@ retract (
 	v1.0.0 // Bug discovered.
 	v1.0.1 // Bug discovered.
     v1.1.0 // Bug discovered.
+	v1.2.0 // SetZeros should not have been exported.
 )
