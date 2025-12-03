@@ -61,3 +61,13 @@ func BenchmarkStdNew(b *testing.B) {
 	}
 	result = r
 }
+
+func BenchmarkNewZero(b *testing.B) {
+	var r *Person
+	for n := 0; n < b.N; n++ {
+		for n := 0; n < N; n++ {
+			r = NewZero[Person]()
+		}
+	}
+	result = r
+}

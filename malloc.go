@@ -76,3 +76,11 @@ func New[T any](fp ...[]PtrOs) *T {
 	}
 	return (*T)(ptr)
 }
+
+// NewZero allocates memory for a zero-value struct.
+// The value returned is a pointer to a newly allocated value of that type.
+// It is equivalent to new(T) (but appears to be faster).
+func NewZero[T any]() *T {
+	var x *T
+	return (*T)(Malloc(unsafe.Sizeof(*x), true))
+}
