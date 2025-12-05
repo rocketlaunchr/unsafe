@@ -1,10 +1,9 @@
-// go test -count=1 -v -bench=.
+// go test -count=1 -v -bench=. -benchmem
 
 package unsafe
 
 import (
 	"reflect"
-	"sync"
 	"testing"
 	"unsafe"
 )
@@ -15,19 +14,20 @@ type Person struct {
 	phone *int
 }
 
+var pfs = FindPointerFields(reflect.TypeFor[Person]())
+
+func (p *Person) UnsafePointerFields() [][2]uintptr {
+	return pfs
+	return [][2]uintptr{
+		{unsafe.Offsetof(Person{}.name), unsafe.Sizeof(Person{}.name)},
+		{unsafe.Offsetof(Person{}.phone), unsafe.Sizeof(Person{}.phone)},
+	}
+	return nil
+}
+
 var result *Person
 
 const N = 1000
-
-var pts = sync.OnceValue(func() []PtrOs {
-	return FindPointerFields(reflect.TypeFor[Person]())
-})
-
-var pts2 = FindPointerFields(reflect.TypeFor[Person]())
-
-func init() {
-	pts()
-}
 
 func BenchmarkMallocNew(b *testing.B) {
 	var r *Person
@@ -44,9 +44,7 @@ func BenchmarkMallocNewSelectiveZeroing(b *testing.B) {
 	var r *Person
 	for n := 0; n < b.N; n++ {
 		for n := 0; n < N; n++ {
-			// 			r = New[Person](pts()) // sync.Once is super-slow
-			r = New[Person](pts2)
-			// 			r = New[Person](nil) // Don't perform zeroing
+			r = New[Person]()
 		}
 	}
 	result = r

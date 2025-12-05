@@ -2,22 +2,18 @@ package unsafe
 
 import (
 	"reflect"
+	"slices"
 )
 
-// PtrOs represents the offsets of a struct's Pointer fields.
-type PtrOs struct {
-	offset uintptr
-	size   uintptr
-}
-
-// FindPointerFields finds the offsets of all fields in a struct
-// that contain pointers and other reference types.
-func FindPointerFields(t reflect.Type) []PtrOs {
+// FindPointerFields finds the offsets (and corresponding sizes) of all fields
+// in a struct that contain pointers and other reference types.
+func FindPointerFields(t reflect.Type) [][2]uintptr {
 	return findPointerFields(t, 0, true)
 }
 
-func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []PtrOs {
-	var results []PtrOs
+func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) [][2]uintptr {
+	var results [][2]uintptr
+	defer func() { merge(&results) }()
 
 	if top {
 		// If the type is a pointer, dereference it.
@@ -35,6 +31,7 @@ func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []PtrOs 
 
 	switch t.Kind() {
 	case reflect.Struct:
+	NextField:
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
 			fieldOffset = currentOffset + field.Offset
@@ -47,38 +44,30 @@ func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []PtrOs 
 					maxElements = maxElements * f.Len()
 				}
 				maxElements = maxElements * f.Len()
+				if maxElements == 0 {
+					continue NextField
+				}
 				f = f.Elem()
 
 				switch f.Kind() {
 				case reflect.Array:
 				// Not possible
 				case reflect.Slice, reflect.String, reflect.Interface, reflect.Chan, reflect.Map, reflect.Func, reflect.Pointer, reflect.UnsafePointer:
-					results = append(results, PtrOs{
-						offset: (fieldOffset),
-						size:   (field.Type.Size()),
-					})
+					results = append(results, [2]uintptr{fieldOffset, field.Type.Size()})
 				case reflect.Struct:
-					if maxElements > 0 {
-						pfs := findPointerFields(f, fieldOffset, false)
-						res := make([]PtrOs, 0, len(pfs)*maxElements)
-						for _, val := range pfs {
-							for i := 0; i < maxElements; i++ {
-								res = append(res, PtrOs{
-									offset: val.offset + f.Size()*uintptr(i),
-									size:   val.size,
-								})
-							}
+					pfs := findPointerFields(f, fieldOffset, false)
+					res := make([][2]uintptr, 0, len(pfs)*maxElements)
+					for _, val := range pfs {
+						for i := 0; i < maxElements; i++ {
+							res = append(res, [2]uintptr{val[0] + f.Size()*uintptr(i), val[1]})
 						}
-						results = append(results, res...)
 					}
+					results = append(results, res...)
 				default:
-
+					// Non-reference types
 				}
 			case reflect.Slice, reflect.String, reflect.Interface, reflect.Chan, reflect.Map, reflect.Func, reflect.Pointer, reflect.UnsafePointer:
-				results = append(results, PtrOs{
-					offset: (fieldOffset),
-					size:   (field.Type.Size()),
-				})
+				results = append(results, [2]uintptr{fieldOffset, field.Type.Size()})
 			case reflect.Struct:
 				results = append(results, findPointerFields(field.Type, fieldOffset, false)...)
 			default:
@@ -92,4 +81,21 @@ func findPointerFields(t reflect.Type, currentOffset uintptr, top bool) []PtrOs 
 	}
 
 	return results
+}
+
+func merge(s *[][2]uintptr) {
+	toDel := []int{}
+	for i := len(*s) - 1; i > 0; i-- {
+		current := &(*s)[i]
+		prev := &(*s)[i-1]
+
+		if prev[0]+prev[1] == current[0] {
+			prev[1] += current[1]
+			toDel = append(toDel, i)
+		}
+	}
+
+	for _, val := range toDel {
+		*s = slices.Delete(*s, val, val+1)
+	}
 }
