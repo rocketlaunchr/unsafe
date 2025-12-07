@@ -5,8 +5,8 @@ import (
 	"slices"
 )
 
-// FindPointerFields finds the offsets (and corresponding sizes) of all fields
-// in a struct that contain pointers and other reference types.
+// FindPointerFields finds in a struct the offsets (and corresponding sizes)
+// of all fields that contain pointers and other reference types.
 func FindPointerFields(t reflect.Type) [][2]uintptr {
 	return findPointerFields(t, 0, true)
 }

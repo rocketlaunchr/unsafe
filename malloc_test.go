@@ -3,25 +3,23 @@
 package unsafe
 
 import (
-	"reflect"
 	"testing"
 	"unsafe"
 )
 
 type Person struct {
-	name  string
+	name  [50]byte
 	age   int
-	phone *int
+	phone int
 }
 
-var pfs = FindPointerFields(reflect.TypeFor[Person]())
+var clrout = [][2]uintptr{
+	{unsafe.Offsetof(Person{}.name), unsafe.Sizeof(Person{}.name)},
+	{unsafe.Offsetof(Person{}.phone), unsafe.Sizeof(Person{}.phone)},
+}
 
-func (p *Person) UnsafePointerFields() [][2]uintptr {
-	return pfs
-	return [][2]uintptr{
-		{unsafe.Offsetof(Person{}.name), unsafe.Sizeof(Person{}.name)},
-		{unsafe.Offsetof(Person{}.phone), unsafe.Sizeof(Person{}.phone)},
-	}
+func (p *Person) UnsafeClearOutFields() [][2]uintptr {
+	return clrout
 	return nil
 }
 
